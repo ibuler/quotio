@@ -303,6 +303,19 @@ final class StatusBarMenuBuilder {
             isActiveInIDE: isActiveInIDE,
             onUseAccount: provider == .antigravity && !isActiveInIDE ? { [weak viewModel] in
                 Self.showSwitchConfirmation(email: email, viewModel: viewModel)
+            } : nil,
+            onSwitchAccount: provider == .codex ? { [weak viewModel] in
+                guard let viewModel else { return }
+                Task { @MainActor in
+                    let loaded = await viewModel.loadCodexAccount(accountKey: accountKey)
+                    StatusBarManager.shared.rebuildMenuInPlace()
+                    if !loaded, let message = viewModel.errorMessage {
+                        let alert = NSAlert()
+                        alert.messageText = "codex.account.switchTitle".localized()
+                        alert.informativeText = message
+                        alert.runModal()
+                    }
+                }
             } : nil
         )
 
@@ -511,6 +524,7 @@ private struct MenuProviderSectionHeader: View {
                     || !viewModel.supportsScopedRefresh(for: provider)
             )
             .help("action.refreshQuota".localized())
+
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
@@ -804,11 +818,14 @@ private struct MenuAccountCardView: View {
     let subscriptionInfo: SubscriptionInfo?
     let isActiveInIDE: Bool
     let onUseAccount: (() -> Void)?
+    let onSwitchAccount: (() -> Void)?
     
     private var settings: MenuBarSettingsManager { MenuBarSettingsManager.shared }
     @State private var isHovered = false
     @State private var isUseHovered = false
     @State private var isUsingAccount = false
+    @State private var isCodexSnapshotAvailable = false
+    @State private var isCurrentCodexAccount = false
 
     private var accountID: QuotaAccountID {
         QuotaAccountID(provider: provider, accountKey: accountKey)
@@ -817,7 +834,8 @@ private struct MenuAccountCardView: View {
     private var displayEmail: String {
         email.masked(if: settings.hideSensitiveInfo)
     }
-    
+
+
     // Modern Tier Badge Config
     private var tierConfig: (name: String, bgColor: Color, textColor: Color)? {
         if let info = subscriptionInfo {
@@ -974,6 +992,13 @@ private struct MenuAccountCardView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .onHover { isHovered = $0 }
+        .task(id: "\(accountKey):\(viewModel.codexAccountRevision)") {
+            guard provider == .codex, !OperatingModeManager.shared.isRemoteProxyMode else { return }
+            let status = await viewModel.codexAccountStatus(for: accountKey)
+            guard !Task.isCancelled else { return }
+            isCurrentCodexAccount = status.current
+            isCodexSnapshotAvailable = status.available
+        }
     }
     
     // MARK: - Header
@@ -1013,6 +1038,21 @@ private struct MenuAccountCardView: View {
                     || !viewModel.supportsScopedRefresh(for: provider)
             )
             .help("action.refreshQuota".localized())
+
+            if provider == .codex, isCodexSnapshotAvailable, !isCurrentCodexAccount,
+               let onSwitchAccount {
+                Button {
+                    onSwitchAccount()
+                } label: {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.blue)
+                        .frame(width: 20, height: 20)
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.isSwitchingCodexAccount)
+                .help("codex.account.loadHelp".localized())
+            }
             
             // Tier Badge
             if let config = tierConfig {

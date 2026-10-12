@@ -91,6 +91,8 @@ final class QuotaViewModel {
             return true
         }
     }
+    var codexAccountRevision = 0
+    var isSwitchingCodexAccount = false
     var errorMessage: String?
     var oauthState: OAuthState?
 
@@ -241,6 +243,7 @@ final class QuotaViewModel {
 
     /// Post notification to trigger UI updates (works even when window is closed)
     private func notifyQuotaDataChanged() {
+        codexAccountRevision += 1
         NotificationCenter.default.post(name: Self.quotaDataDidChangeNotification, object: nil)
     }
 
@@ -1957,6 +1960,43 @@ final class QuotaViewModel {
         }
         monitorAccountIssues.removeValue(forKey: account)
         await finishScopedRefresh(provider: account.provider)
+    }
+
+    func codexAccountStatus(for accountKey: String) async -> (available: Bool, current: Bool) {
+        guard let data = await codexCLIFetcher.nativeAuthData(for: accountKey),
+              CodexAccountSnapshotService.identity(in: data) != nil else { return (false, false) }
+        let current = await CodexAccountSnapshotService.shared.currentAuthData()
+        return (true, current.map { CodexAccountSnapshotService.sameAccount($0, data) } ?? false)
+    }
+
+    func saveCodexAccount(accountKey: String) async throws {
+        guard let expected = await codexCLIFetcher.nativeAuthData(for: accountKey) else {
+            throw CodexAccountSnapshotService.SnapshotError.invalidCredential
+        }
+        try await CodexAccountSnapshotService.shared.saveCurrent(for: accountKey, expectedAuth: expected)
+        codexAccountRevision += 1
+    }
+
+    @discardableResult
+    func loadCodexAccount(accountKey: String) async -> Bool {
+        guard !isSwitchingCodexAccount else { return false }
+        isSwitchingCodexAccount = true
+        defer { isSwitchingCodexAccount = false }
+        do {
+            guard let data = await codexCLIFetcher.nativeAuthData(for: accountKey) else {
+                throw CodexAccountSnapshotService.SnapshotError.snapshotMissing
+            }
+            try await CodexAccountSnapshotService.shared.activate(data, accountKey: accountKey)
+            errorMessage = nil
+            codexAccountRevision += 1
+            monitorAccounts = await monitorCoordinator.discoverAccounts(merging: providerQuotas)
+            notifyQuotaDataChanged()
+            await refreshQuota(for: QuotaAccountID(provider: .codex, accountKey: accountKey))
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
     }
 
     func refreshQuotaForProvider(_ provider: AIProvider) async {

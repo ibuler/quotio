@@ -176,6 +176,7 @@ struct AccountRowData: Identifiable, Hashable {
 // MARK: - AccountRow View
 
 struct AccountRow: View {
+    @Environment(QuotaViewModel.self) private var viewModel
     let account: AccountRowData
     var onDelete: (() -> Void)?
     var onEdit: (() -> Void)?
@@ -188,6 +189,8 @@ struct AccountRow: View {
     @State private var showWarning = false
     @State private var showMaxItemsAlert = false
     @State private var showDeleteConfirmation = false
+    @State private var codexSnapshotAvailable = false
+    @State private var isCurrentNativeCodexAccount = false
     
     private var isMenuBarSelected: Bool {
         settings.isSelected(account.menuBarItem)
@@ -205,7 +208,12 @@ struct AccountRow: View {
         default: return .gray
         }
     }
-    
+
+    private var supportsNativeCodexSwitching: Bool {
+        account.provider == .codex && !OperatingModeManager.shared.isRemoteProxyMode
+    }
+
+
     var body: some View {
         HStack(spacing: 12) {
             // Provider icon
@@ -276,15 +284,17 @@ struct AccountRow: View {
                     .clipShape(Capsule())
             }
             
-            // Switch button (Antigravity only, for proxy/direct accounts that are not active)
-            if account.provider == .antigravity && !isActiveInIDE && account.source != .autoDetected {
+            // Switch the native account when usable credentials are available.
+            if (account.provider == .antigravity && !isActiveInIDE && account.source != .autoDetected)
+                || (supportsNativeCodexSwitching && codexSnapshotAvailable && !isCurrentNativeCodexAccount) {
                 Button {
+                    guard account.provider != .codex || !viewModel.isSwitchingCodexAccount else { return }
                     onSwitch?()
                 } label: {
                     HStack(spacing: 4) {
-                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                        Image(systemName: supportsNativeCodexSwitching ? "arrow.left.arrow.right" : "rectangle.portrait.and.arrow.right")
                             .font(.caption2)
-                        Text("antigravity.useInIDE".localized())
+                        Text(supportsNativeCodexSwitching ? "codex.account.switchAction".localized() : "antigravity.useInIDE".localized())
                             .font(.caption2)
                     }
                     .padding(.horizontal, 8)
@@ -294,7 +304,8 @@ struct AccountRow: View {
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .help("antigravity.switch.title".localized())
+                .disabled(supportsNativeCodexSwitching && viewModel.isSwitchingCodexAccount)
+                .help((supportsNativeCodexSwitching ? "codex.account.loadHelp" : "antigravity.switch.title").localized())
             }
             
             // Menu bar toggle
@@ -349,12 +360,17 @@ struct AccountRow: View {
         }
         .contentShape(Rectangle())
         .contextMenu {
-            // Switch account option (Antigravity only)
-            if account.provider == .antigravity && !isActiveInIDE && account.source != .autoDetected {
+            // Native account switching.
+            if (account.provider == .antigravity && !isActiveInIDE && account.source != .autoDetected)
+                || (supportsNativeCodexSwitching && codexSnapshotAvailable && !isCurrentNativeCodexAccount) {
                 Button {
+                    guard account.provider != .codex || !viewModel.isSwitchingCodexAccount else { return }
                     onSwitch?()
                 } label: {
-                    Label("antigravity.switch.title".localized(), systemImage: "arrow.triangle.2.circlepath")
+                    Label(
+                        supportsNativeCodexSwitching ? "codex.account.switchAction".localized() : "antigravity.switch.title".localized(),
+                        systemImage: supportsNativeCodexSwitching ? "arrow.left.arrow.right" : "arrow.triangle.2.circlepath"
+                    )
                 }
                 
                 Divider()
@@ -427,6 +443,13 @@ struct AccountRow: View {
                 settings.menuBarMaxItems
             ))
         }
+        .task(id: "\(account.id):\(viewModel.codexAccountRevision)") {
+            guard supportsNativeCodexSwitching else { return }
+            let status = await viewModel.codexAccountStatus(for: account.menuBarAccountKey)
+            guard !Task.isCancelled else { return }
+            isCurrentNativeCodexAccount = status.current
+            codexSnapshotAvailable = status.available
+        }
     }
     
     private func handleMenuBarToggle() {
@@ -486,4 +509,5 @@ struct AccountRow: View {
             )
         )
     }
+    .environment(QuotaViewModel())
 }

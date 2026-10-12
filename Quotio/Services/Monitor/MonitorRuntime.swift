@@ -341,6 +341,11 @@ actor MonitorAccountDiscovery {
         var candidates = await canonicalizeCodexAccounts(await vault.accounts(), aliases: codexAliases)
         candidates.append(contentsOf: await discoverNativeFiles(codexAliases: codexAliases))
         candidates.append(contentsOf: discoverNativeKeychains(codexAliases: codexAliases))
+        for snapshot in await CodexAccountSnapshotService.shared.snapshots() {
+            let account = MonitorAccount.make(provider: .codex, accountKey: snapshot.accountKey,
+                displayName: snapshot.email, source: .nativeCredential, credentialReference: snapshot.url.path)
+            candidates.append(Self.canonicalizeCodexAccount(account, accountID: snapshot.accountID, aliases: codexAliases))
+        }
         let legacy = legacyFiles.map(MonitorAccount.makeLegacy)
         candidates.append(contentsOf: legacy)
 

@@ -1045,6 +1045,146 @@
         }
       }
     },
+    "action.load" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Load" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Charger" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tải" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "加载" } }
+      }
+    },
+    "codex.account.authMissing" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex auth.json was not found."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未找到 Codex auth.json。"
+          }
+        }
+      }
+    },
+    "codex.account.snapshotMissing" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No usable local credentials were found for this Codex account."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未找到此 Codex 账号可用的本地凭证。"
+          }
+        }
+      }
+    },
+    "codex.account.invalidCredential" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Codex credential is invalid or does not identify an account."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex 凭证无效或无法识别账号。"
+          }
+        }
+      }
+    },
+    "codex.account.changed" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The active Codex account changed. Refresh and try again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前 Codex 账号已改变，请刷新后重试。"
+          }
+        }
+      }
+    },
+    "codex.account.switchAction" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basculer"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chuyển"
+          }
+        }
+      }
+    },
+    "codex.account.loadHelp" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Switch to this Codex account and back up the current auth.json" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Restaurer ce compte Codex et sauvegarder les fichiers actuels" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Khôi phục tài khoản Codex này và sao lưu các tệp hiện tại" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "切换至此 Codex 账号，并备份当前 auth.json" } }
+      }
+    },
+    "codex.account.saveHelp" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Save the current Codex auth.json for this account" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Enregistrer auth.json actuel pour ce compte" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Lưu auth.json hiện tại cho tài khoản này" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "保存此账号当前的 auth.json" } }
+      }
+    },
+    "codex.account.switchTitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Codex account" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Compte Codex" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tài khoản Codex" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Codex 账号" } }
+      }
+    },
+    "codex.account.saved" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Codex account saved." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Compte Codex enregistré." } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã lưu tài khoản Codex." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Codex 账号已保存。" } }
+      }
+    },
+    "codex.account.loaded" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Codex account loaded. Start a new Codex process to use it." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Compte Codex chargé. Démarrez un nouveau processus Codex pour l'utiliser." } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã tải tài khoản Codex. Hãy khởi động tiến trình Codex mới để sử dụng." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Codex 账号已加载。请重新启动 Codex 进程后使用。" } }
+      }
+    },
     "action.start" : {
       "extractionState" : "stale",
       "localizations" : {

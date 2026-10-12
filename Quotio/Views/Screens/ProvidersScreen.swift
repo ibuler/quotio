@@ -15,6 +15,7 @@ import UniformTypeIdentifiers
 
 struct ProvidersScreen: View {
     @Environment(QuotaViewModel.self) private var viewModel
+    @State private var codexSwitchMessage: String?
     @State private var isImporterPresented = false
     @State private var selectedProvider: AIProvider?
     @State private var showProxyRequiredAlert = false
@@ -204,6 +205,13 @@ struct ProvidersScreen: View {
         } message: {
             Text("providers.proxyRequired.message".localized())
         }
+        .alert("codex.account.switchTitle".localized(), isPresented: Binding(
+            get: { codexSwitchMessage != nil }, set: { if !$0 { codexSwitchMessage = nil } }
+        )) {
+            Button("action.ok".localized(), role: .cancel) { codexSwitchMessage = nil }
+        } message: {
+            Text(codexSwitchMessage ?? "")
+        }
         .sheet(isPresented: $showIDEScanSheet) {
             IDEScanSheet {}
             .environment(viewModel)
@@ -390,6 +398,11 @@ struct ProvidersScreen: View {
                         },
                         onSwitchAccount: provider == .antigravity ? { account in
                             switchingAccount = account
+                        } : provider == .codex ? { account in
+                            Task<Void, Never> { @MainActor in
+                                let loaded = await viewModel.loadCodexAccount(accountKey: account.menuBarAccountKey)
+                                codexSwitchMessage = loaded ? "codex.account.loaded".localized() : viewModel.errorMessage
+                            }
                         } : nil,
                         onToggleDisabled: { account in
                             Task { await toggleAccountDisabled(account) }

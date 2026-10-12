@@ -2885,6 +2885,7 @@ struct ProxyBinarySourceSelectionSheet: View {
     }
 }
 
+@MainActor
 private func cardHeader(title: String, systemImage: String, color: Color) -> some View {
     HStack {
         Image(systemName: systemImage)

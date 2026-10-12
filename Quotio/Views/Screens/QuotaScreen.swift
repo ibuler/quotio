@@ -418,6 +418,15 @@ private struct ProviderQuotaView: View {
             }
         }
         
+        if provider == .codex {
+            var seen = Set(accounts.map(\.key))
+            for account in viewModel.monitorAccounts where account.provider == .codex && !account.isDisabled {
+                guard seen.insert(account.accountKey).inserted else { continue }
+                accounts.append(AccountInfo(key: account.accountKey, email: account.displayName,
+                    status: "active", statusColor: .secondary, authFile: nil,
+                    quotaData: nil, subscriptionInfo: nil))
+            }
+        }
         let sorted = accounts.sorted { $0.email < $1.email }
 
         // Float the account currently in use (Antigravity IDE) to the top,
@@ -488,6 +497,10 @@ private struct AccountQuotaCardV2: View {
     
     @State private var showSwitchSheet = false
     @State private var showModelsDetailSheet = false
+    @State private var codexSnapshotAvailable = false
+    @State private var isCurrentNativeCodexAccount = false
+    @State private var isCodexSnapshotActionRunning = false
+    @State private var codexSnapshotMessage: String?
 
     private var accountID: QuotaAccountID {
         QuotaAccountID(provider: provider, accountKey: account.key)
@@ -530,7 +543,12 @@ private struct AccountQuotaCardV2: View {
     private var isActiveInIDE: Bool {
         provider == .antigravity && viewModel.isAntigravityAccountActive(email: account.email)
     }
-    
+
+    private var supportsNativeCodexSwitching: Bool {
+        provider == .codex && !OperatingModeManager.shared.isRemoteProxyMode
+    }
+
+
     /// Build 4-group display for Antigravity: Gemini 3 Pro, Gemini 3 Flash, Gemini 3 Image, Claude 4.5
     private var antigravityDisplayGroups: [AntigravityDisplayGroup] {
         guard let data = account.quotaData, provider == .antigravity else { return [] }
@@ -650,6 +668,52 @@ private struct AccountQuotaCardV2: View {
             Spacer()
             
             HStack(spacing: 6) {
+                if supportsNativeCodexSwitching {
+                    if isCurrentNativeCodexAccount {
+                        Button {
+                            Task { await saveCodexSnapshot() }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "square.and.arrow.down")
+                                    .font(.caption)
+                                Text("action.save".localized())
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .background(Color.primary.opacity(0.05))
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isCodexSnapshotActionRunning || viewModel.isSwitchingCodexAccount)
+                        .help("codex.account.saveHelp".localized())
+                    }
+
+                    if codexSnapshotAvailable {
+                        Button {
+                            Task { await loadCodexSnapshot() }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.left.arrow.right")
+                                    .font(.caption)
+                                Text("codex.account.switchAction".localized())
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundStyle(.blue)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .background(Color.blue.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isCodexSnapshotActionRunning || viewModel.isSwitchingCodexAccount || isCurrentNativeCodexAccount)
+                        .help("codex.account.loadHelp".localized())
+                    }
+                }
+
                 if provider == .antigravity {
                     Button {
                         showWarmupSheet = true
@@ -809,6 +873,44 @@ private struct AccountQuotaCardV2: View {
                 }
             )
             .environment(viewModel)
+        }
+        .task(id: "\(account.key):\(viewModel.codexAccountRevision)") {
+            guard supportsNativeCodexSwitching else { return }
+            let status = await viewModel.codexAccountStatus(for: account.key)
+            guard !Task.isCancelled else { return }
+            isCurrentNativeCodexAccount = status.current
+            codexSnapshotAvailable = status.available
+        }
+        .alert("codex.account.switchTitle".localized(), isPresented: Binding(
+            get: { codexSnapshotMessage != nil },
+            set: { if !$0 { codexSnapshotMessage = nil } }
+        )) {
+            Button("action.ok".localized(), role: .cancel) { codexSnapshotMessage = nil }
+        } message: {
+            Text(codexSnapshotMessage ?? "")
+        }
+    }
+
+    private func saveCodexSnapshot() async {
+        isCodexSnapshotActionRunning = true
+        defer { isCodexSnapshotActionRunning = false }
+        do {
+            try await viewModel.saveCodexAccount(accountKey: account.key)
+            codexSnapshotAvailable = true
+            codexSnapshotMessage = "codex.account.saved".localized()
+        } catch {
+            codexSnapshotMessage = error.localizedDescription
+        }
+    }
+
+    private func loadCodexSnapshot() async {
+        isCodexSnapshotActionRunning = true
+        defer { isCodexSnapshotActionRunning = false }
+        if await viewModel.loadCodexAccount(accountKey: account.key) {
+            isCurrentNativeCodexAccount = true
+            codexSnapshotMessage = "codex.account.loaded".localized()
+        } else if let error = viewModel.errorMessage {
+            codexSnapshotMessage = error
         }
     }
     

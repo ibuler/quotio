@@ -376,15 +376,20 @@ actor AntigravityDatabaseService {
                 
             case .unknown:
                 // Dual fallback: try both formats
-                let newFormatResult = Result {
+                var newFormatError: Error?
+                do {
                     try injectNewFormat(
                         accessToken: accessToken,
                         refreshToken: refreshToken,
                         expiry: expiry,
                         db: db
                     )
+                } catch {
+                    newFormatError = error
                 }
-                let oldFormatResult = Result {
+
+                var oldFormatError: Error?
+                do {
                     try injectOldFormat(
                         accessToken: accessToken,
                         refreshToken: refreshToken,
@@ -392,10 +397,12 @@ actor AntigravityDatabaseService {
                         email: email,
                         db: db
                     )
+                } catch {
+                    oldFormatError = error
                 }
                 
-                if case .failure = newFormatResult, case .failure(let oldErr) = oldFormatResult {
-                    throw oldErr
+                if newFormatError != nil, let oldFormatError {
+                    throw oldFormatError
                 }
             }
             

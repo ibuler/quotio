@@ -274,12 +274,19 @@ actor CodexCLIQuotaFetcher {
         }
         
         let tokenResponse = try JSONDecoder().decode(RefreshResponse.self, from: data)
-        return TokenRefresh(
+        let refreshed = TokenRefresh(
             accessToken: tokenResponse.access_token,
             refreshToken: tokenResponse.refresh_token,
             idToken: tokenResponse.id_token,
             expiresIn: tokenResponse.expires_in
         )
+        do {
+            try await CodexAccountSnapshotService.shared.persistRefresh(refreshed, originalRefreshToken: refreshToken)
+        } catch {
+            // Still let the caller persist the rotated token to its authoritative source.
+            Log.warning("Could not update a saved Codex credential after token refresh.")
+        }
+        return refreshed
     }
     
     /// Check if access token is expired by decoding JWT
@@ -365,6 +372,11 @@ actor CodexCLIQuotaFetcher {
         for (key, quota) in await fetchLegacyQuotas() where results[key] == nil {
             results[key] = quota
         }
+        for snapshot in await CodexAccountSnapshotService.shared.snapshots() {
+            let key = canonicalLocalKey(email: snapshot.email, accountID: snapshot.accountID, fallback: snapshot.accountKey)
+            guard results[key] == nil else { continue }
+            if let quota = await fetchQuotaFromSavedSnapshot(forAccountKey: snapshot.accountKey) { results[key] = quota }
+        }
         return results
     }
 
@@ -399,15 +411,71 @@ actor CodexCLIQuotaFetcher {
                 fallback: "Codex User"
             )
             guard key == accountKey else { continue }
-            return await fetchLocalAuthQuota(source: source, claims: claims)
+            if let quota = await fetchLocalAuthQuota(source: source, claims: claims) { return quota }
         }
 
         let directory = NSString(string: "~/.cli-proxy-api").expandingTildeInPath
         guard let filename = try? FileManager.default.contentsOfDirectory(atPath: directory).first(where: {
             $0.hasPrefix("codex-") && $0.hasSuffix(".json") && $0.codexFilenameKey == accountKey
-        }) else { return nil }
+        }) else { return await fetchQuotaFromSavedSnapshot(forAccountKey: accountKey) }
         let path = (directory as NSString).appendingPathComponent(filename)
-        return await fetchLegacyQuota(at: path)
+        if let quota = await fetchLegacyQuota(at: path) { return quota }
+        return await fetchQuotaFromSavedSnapshot(forAccountKey: accountKey)
+    }
+
+    /// Resolve native credentials from existing local accounts before falling back to snapshots.
+    func nativeAuthData(for accountKey: String) async -> Data? {
+        var candidates: [Data] = []
+        for account in await MonitorCredentialVault.shared.accounts() where account.provider == .codex {
+            guard let credential = await MonitorCredentialVault.shared.credential(for: account.id) else { continue }
+            let claims = credential.idToken.flatMap(decodeJWT)
+            let key = canonicalLocalKey(email: claims?.email, accountID: credential.accountID ?? claims?.accountId, fallback: account.accountKey)
+            guard key == accountKey || account.accountKey == accountKey else { continue }
+            let auth = CodexCLIAuthFile(tokens: CodexCLITokens(idToken: credential.idToken,
+                accessToken: credential.accessToken, refreshToken: credential.refreshToken,
+                accountId: credential.accountID ?? claims?.accountId))
+            if let data = try? JSONEncoder().encode(auth), CodexAccountSnapshotService.identity(in: data) != nil { candidates.append(data) }
+        }
+        for source in readAuthSources() {
+            let claims = source.auth.tokens?.idToken.flatMap(decodeJWT)
+            let key = canonicalLocalKey(email: claims?.email, accountID: source.auth.tokens?.accountId ?? claims?.accountId, fallback: "Codex User")
+            if key == accountKey, let data = try? Data(contentsOf: URL(fileURLWithPath: source.path)) { candidates.append(data) }
+        }
+        if let record = KeychainHelper.readExternalCredentialRecord(service: "Codex Auth"),
+           let auth = try? JSONDecoder().decode(CodexCLIAuthFile.self, from: record.data) {
+            let claims = auth.tokens?.idToken.flatMap(decodeJWT)
+            if canonicalLocalKey(email: claims?.email, accountID: auth.tokens?.accountId ?? claims?.accountId, fallback: "Codex") == accountKey {
+                candidates.append(record.data)
+            }
+        }
+        let directory = NSString(string: "~/.cli-proxy-api").expandingTildeInPath
+        for filename in (try? FileManager.default.contentsOfDirectory(atPath: directory)) ?? []
+            where filename.hasPrefix("codex-") && filename.hasSuffix(".json") && filename.codexFilenameKey == accountKey {
+            guard let data = try? Data(contentsOf: URL(fileURLWithPath: directory).appendingPathComponent(filename)),
+                  let legacy = try? JSONDecoder().decode(CodexAuthFile.self, from: data) else { continue }
+            let claims = legacy.idToken.flatMap(decodeJWT)
+            let auth = CodexCLIAuthFile(tokens: CodexCLITokens(idToken: legacy.idToken,
+                accessToken: legacy.accessToken, refreshToken: legacy.refreshToken,
+                accountId: legacy.accountId ?? claims?.accountId))
+            if let data = try? JSONEncoder().encode(auth) { candidates.append(data) }
+        }
+        if let snapshot = await savedSnapshot(for: accountKey), let data = try? Data(contentsOf: snapshot.url) {
+            candidates.append(data)
+        }
+        return CodexAccountSnapshotService.mostRecentAuth(in: candidates)
+    }
+
+    private func savedSnapshot(for accountKey: String) async -> CodexAccountSnapshotService.Snapshot? {
+        let snapshots = await CodexAccountSnapshotService.shared.snapshots()
+        return snapshots.first { $0.accountKey == accountKey }
+            ?? snapshots.first { canonicalLocalKey(email: $0.email, accountID: $0.accountID, fallback: $0.accountKey) == accountKey }
+    }
+
+    /// Reuses the normal refresh/persistence path so rotated tokens survive the next switch.
+    func fetchQuotaFromSavedSnapshot(forAccountKey accountKey: String) async -> ProviderQuotaData? {
+        guard let snapshot = await savedSnapshot(for: accountKey),
+              let auth = readAuthFile(at: snapshot.url.path) else { return nil }
+        return await fetchLocalAuthQuota(source: (snapshot.url.path, auth), claims: auth.tokens?.idToken.flatMap(decodeJWT))
     }
 
     private func canonicalLocalKey(email: String?, accountID: String?, fallback: String) -> String {
