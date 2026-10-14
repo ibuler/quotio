@@ -381,7 +381,7 @@ private actor QuotaFeatureOAuthAuthorizer: OAuthAuthorizing {
     func begin(
         request: OAuthAuthorizationRequest,
         attemptID: OAuthAttemptID,
-        progress: @escaping @concurrent @Sendable (OAuthPrompt) async -> Void
+        progress: @escaping @Sendable (OAuthPrompt) async -> Void
     ) async throws -> OAuthAuthorizationOutcome {
         recordedRequests.append(request)
         throw OAuthFlowFailure.unsupportedProvider

@@ -286,6 +286,9 @@ private struct AccountQuotaCardV2: View {
             Spacer()
 
             HStack(spacing: 6) {
+                if provider == .codex {
+                    CodexAccountSwitchButton(accountID: account.key)
+                }
                 if provider == .antigravity {
                     Button {
                         showWarmupSheet = true

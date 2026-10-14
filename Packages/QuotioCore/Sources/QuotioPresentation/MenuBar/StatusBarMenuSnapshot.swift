@@ -9,6 +9,7 @@ struct StatusBarMenuAccountSnapshot: Equatable, Sendable {
     let subscription: QuotaSubscriptionInfo?
     let isRefreshing: Bool
     let isRefreshBlocked: Bool
+    var canSwitchCodex: Bool = false
 }
 
 struct StatusBarMenuProviderSnapshot: Equatable, Sendable {
@@ -43,7 +44,9 @@ public enum StatusBarMenuSnapshotMapper {
         quota: QuotaSnapshot,
         menuBarPreferences: MenuBarPreferences,
         language: AppLanguage,
-        trackingPreferences: ProviderTrackingPreferences = ProviderTrackingPreferences()
+        trackingPreferences: ProviderTrackingPreferences = ProviderTrackingPreferences(),
+        codexSwitchStatus: CodexAccountSwitchStatus = .init(),
+        isSwitchingCodex: Bool = false
     ) -> StatusBarMenuSnapshot {
         let disabledAccounts = Set(monitorAccounts.lazy.filter(\.isDisabled).map {
             "\($0.providerID.rawValue):\($0.accountKey)"
@@ -68,7 +71,10 @@ public enum StatusBarMenuSnapshotMapper {
                     quota: account.data,
                     subscription: quota.subscriptions[provider]?[account.accountKey],
                     isRefreshing: quota.refreshingProviders.contains(provider),
-                    isRefreshBlocked: !quota.canRefresh || quota.refreshingProviders.contains(provider)
+                    isRefreshBlocked: !quota.canRefresh || quota.refreshingProviders.contains(provider),
+                    canSwitchCodex: provider == .codex && !isSwitchingCodex
+                        && codexSwitchStatus.availableAccountIds.contains(account.accountKey)
+                        && !codexSwitchStatus.currentAccountIds.contains(account.accountKey)
                 )
             }
             return StatusBarMenuProviderSnapshot(

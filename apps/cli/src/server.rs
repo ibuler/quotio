@@ -446,6 +446,11 @@ fn router(state: Arc<ApiState>, policy: Arc<security::Policy>) -> Router {
             "/v2/sources/{id}",
             axum::routing::patch(management::source_patch).delete(management::source_remove),
         )
+        .route("/v2/codex-account", get(management::codex_switch_status))
+        .route(
+            "/v2/accounts/{id}/use-in-codex",
+            post(management::codex_switch),
+        )
         .route("/v2/providers", get(providers))
         .route("/v2/providers/{id}", get(provider))
         .route("/v2/settings", get(settings).patch(patch_settings))

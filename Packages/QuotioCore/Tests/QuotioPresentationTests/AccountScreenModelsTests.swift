@@ -6,6 +6,35 @@ import XCTest
 
 @MainActor
 final class AccountScreenModelsTests: XCTestCase {
+    func testCodexSwitchReloadsCurrentAccountAndIgnoresUnavailableTargets() async {
+        let service = AccountScreenModelService(accounts: [], switchStatus: .init(currentAccountIds: ["old"], availableAccountIds: ["old", "new"]))
+        let model = AccountsScreenModel(accountService: service)
+        await model.reloadAccounts()
+        XCTAssertFalse(model.canSwitchCodexAccount(id: "old"))
+        XCTAssertTrue(model.canSwitchCodexAccount(id: "new"))
+        await model.switchCodexAccount(id: "missing")
+        var calls = await service.switchedIDs
+        XCTAssertTrue(calls.isEmpty)
+        await model.switchCodexAccount(id: "new")
+        calls = await service.switchedIDs
+        XCTAssertEqual(calls, ["new"])
+        XCTAssertEqual(model.codexSwitchStatus.currentAccountIds, ["new"])
+        XCTAssertTrue(model.canSwitchCodexAccount(id: "old"))
+        XCTAssertNil(model.switchingCodexAccountID)
+        XCTAssertEqual(model.codexSwitchMessage, "codex.account.loaded".localized())
+    }
+
+    func testCodexSwitchFailureKeepsCurrentAccountAndAllowsRetry() async {
+        let service = AccountScreenModelService(accounts: [], switchStatus: .init(currentAccountIds: ["old"], availableAccountIds: ["old", "new"]), switchFails: true)
+        let model = AccountsScreenModel(accountService: service)
+        await model.reloadAccounts()
+        await model.switchCodexAccount(id: "new")
+        XCTAssertEqual(model.codexSwitchStatus.currentAccountIds, ["old"])
+        XCTAssertEqual(model.codexSwitchMessage, "codex.account.switchFailed".localized())
+        XCTAssertNil(model.switchingCodexAccountID)
+        XCTAssertTrue(model.canSwitchCodexAccount(id: "new"))
+    }
+
     func testAccountsModelDisplaysHostAccounts() async {
         let account = Account.make(
             providerID: AccountProviderID(rawValue: "codex"),
@@ -188,11 +217,23 @@ private actor AccountScreenModelService: AccountManaging {
     private(set) var lastDeletedID: String?
     private(set) var lastAuthorizedSource: NativeSourcePermission?
 
-    init(accounts: [Account], permissions: [NativeSourcePermission] = []) {
+    private var switchStatus: CodexAccountSwitchStatus
+    private let switchFails: Bool
+    private(set) var switchedIDs: [String] = []
+
+    init(accounts: [Account], permissions: [NativeSourcePermission] = [], switchStatus: CodexAccountSwitchStatus = .init(), switchFails: Bool = false) {
+        self.switchStatus = switchStatus
+        self.switchFails = switchFails
         storedAccounts = accounts
         self.permissions = permissions
     }
 
+    func codexSwitchStatus() -> CodexAccountSwitchStatus { switchStatus }
+    func switchCodexAccount(id: String) throws {
+        if switchFails { throw CodexAccountSwitchFailure.failed }
+        switchedIDs.append(id)
+        switchStatus.currentAccountIds = [id]
+    }
     func registerDetectedNativeAccounts() {}
     func rescanNativeAccounts(for provider: QuotaProvider) {}
     func nativeDiscoverySnapshot() -> NativeDiscoverySnapshot { .init(permissions: permissions) }

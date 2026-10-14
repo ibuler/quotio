@@ -783,15 +783,26 @@ struct ManagedProvider {
 }
 impl ManagedProvider {
     async fn read(&self, context: &ProviderContext) -> Result<ProviderUsage, AccountError> {
-        let tx = begin(self.vault.clone()).await?;
+        let mut tx = begin(self.vault.clone()).await?;
         let account = tx
             .document
             .accounts
-            .iter()
+            .iter_mut()
             .find(|a| a.id == self.id && a.provider == self.provider)
-            .ok_or(AccountError::NotFound)?
-            .clone();
-        drop(tx);
+            .ok_or(AccountError::NotFound)?;
+        if !account.enabled() {
+            return Err(AccountError::SourceDisabled);
+        }
+        let previous = account.credential.clone();
+        if self.provider == Provider::Codex {
+            super::codex_switch::adopt_active(&self.id, &mut account.credential);
+        }
+        let account = account.clone();
+        if previous != account.credential {
+            commit(tx).await?;
+        } else {
+            drop(tx);
+        }
         if !account.enabled() {
             return Err(AccountError::SourceDisabled);
         }
@@ -927,6 +938,12 @@ impl ManagedProvider {
         // Persist returned token lineage even when removal or replacement prevents
         // installing the credential. Keep existing mutation receipts in this write.
         commit(tx).await?;
+        if self.provider == Provider::Codex && result.is_ok() {
+            // Serialize with switching while updating the active native copy.
+            let tx = begin(self.vault.clone()).await?;
+            super::codex_switch::persist_active(&self.id, &latest, &updated)?;
+            drop(tx);
+        }
         drop(guard);
         result?;
         let usage = self

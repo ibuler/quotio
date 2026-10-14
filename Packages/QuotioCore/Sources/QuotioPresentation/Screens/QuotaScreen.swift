@@ -51,6 +51,7 @@ struct QuotaScreen: View {
                 }
             }
         }
+        .modifier(CodexSwitchResultModifier())
         .navigationTitle("connections.usage".localized())
         .toolbar {
             ToolbarItem {

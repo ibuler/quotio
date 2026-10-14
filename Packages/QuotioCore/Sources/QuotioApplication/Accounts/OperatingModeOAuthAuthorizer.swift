@@ -26,7 +26,7 @@ public actor OperatingModeOAuthAuthorizer: OAuthAuthorizing {
     public func begin(
         request: OAuthAuthorizationRequest,
         attemptID: OAuthAttemptID,
-        progress: @escaping @concurrent @Sendable (OAuthPrompt) async -> Void
+        progress: @escaping @Sendable (OAuthPrompt) async -> Void
     ) async throws -> OAuthAuthorizationOutcome {
         let route: Route = await isMonitorMode() ? .monitor : .localProxy
         routes[attemptID] = route

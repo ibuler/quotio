@@ -3,6 +3,7 @@ import QuotioDomain
 
 @MainActor
 enum StatusBarCommand: Equatable {
+    case switchCodex(String)
     case refreshAll
     case refreshProvider(QuotaProvider)
     case refreshAccount(QuotaAccountID)
@@ -15,6 +16,7 @@ enum StatusBarCommand: Equatable {
 
 @MainActor
 public struct StatusBarCommandHandlers {
+    fileprivate let switchCodex: @MainActor @Sendable (String) async -> Void
     fileprivate let refreshAll: @MainActor @Sendable () async -> Void
     fileprivate let refreshProvider: @MainActor @Sendable (QuotaProvider) async -> Void
     fileprivate let refreshAccount: @MainActor @Sendable (QuotaAccountID) async -> Void
@@ -36,8 +38,10 @@ public struct StatusBarCommandHandlers {
         quit: @escaping () -> Void,
         menuNeedsRebuild: @escaping () -> Void,
         openHistory: @escaping (QuotaAccountID) -> Void = { _ in },
+        switchCodex: @escaping @MainActor @Sendable (String) async -> Void = { _ in },
         loadHistory: @escaping @MainActor @Sendable (QuotaAccountID, String, QuotaHistoryRange) async -> QuotaHistoryChart? = { _, _, _ in nil }
     ) {
+        self.switchCodex = switchCodex
         self.refreshAll = refreshAll
         self.refreshProvider = refreshProvider
         self.refreshAccount = refreshAccount
@@ -62,6 +66,8 @@ public final class StatusBarCommandDispatcher {
     @discardableResult
     func dispatch(_ command: StatusBarCommand) -> Task<Void, Never>? {
         switch command {
+        case .switchCodex(let id):
+            return perform { [handlers] in await handlers.switchCodex(id) }
         case .refreshAll:
             return perform(handlers.refreshAll)
         case .refreshProvider(let provider):

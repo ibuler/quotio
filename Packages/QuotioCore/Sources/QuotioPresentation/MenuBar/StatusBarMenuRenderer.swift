@@ -282,6 +282,10 @@ final class StatusBarMenuRenderer {
                 settings: self.snapshot.displaySettings,
                 onRefresh: {
                     await self.commands.dispatch(.refreshAccount(account.id))?.value
+                },
+                canSwitchCodex: current.canSwitchCodex,
+                onSwitchCodex: {
+                    await self.commands.dispatch(.switchCodex(account.id.accountKey))?.value
                 }
             )
         }
@@ -573,6 +577,23 @@ private struct MenuAccountCardView: View {
     let highlightController: StatusBarMenuHighlightController
     let settings: StatusBarMenuDisplaySettings
     let onRefresh: @MainActor () async -> Void
+    let canSwitchCodex: Bool
+    let onSwitchCodex: @MainActor () async -> Void
+    @State private var switching = false
+
+    @ViewBuilder private var switchButton: some View {
+        if canSwitchCodex {
+            Button {
+                switching = true
+                Task { await onSwitchCodex(); switching = false }
+            } label: {
+                Image(systemName: "arrow.left.arrow.right")
+            }
+            .buttonStyle(.borderless)
+            .disabled(switching)
+            .help("codex.account.loadHelp".localized())
+        }
+    }
 
     private var planName: String? {
         data.planType ?? subscriptionInfo?.tierDisplayName
@@ -585,8 +606,11 @@ private struct MenuAccountCardView: View {
     var body: some View {
         Group {
             if settings.quotaDisplayStyle == .compact {
-                MenuCompactAccountRow(email: email, data: data, provider: provider,
-                                      hasDetail: hasDetail, settings: settings)
+                HStack {
+                    MenuCompactAccountRow(email: email, data: data, provider: provider,
+                                          hasDetail: hasDetail, settings: settings)
+                    switchButton
+                }
             } else {
                 VStack(alignment: .leading, spacing: 10) {
                     headerSection
@@ -627,6 +651,8 @@ private struct MenuAccountCardView: View {
                     .lineLimit(1)
                     .fixedSize()
             }
+
+            switchButton
 
             RefreshButton(title: "action.refreshQuota".localized(), isRefreshing: isRefreshing, action: onRefresh)
             .labelStyle(.iconOnly)

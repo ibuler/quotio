@@ -546,6 +546,36 @@
         }
       }
     },
+    "/v2/codex-account": {
+      "get": {
+        "summary": "Read local Codex switch status without exposing credentials",
+        "description": "Requires the local host owner. Returns logical account IDs for managed and native Codex logins and external IDs for enabled CLIProxyAPI auth files.",
+        "security": [{"bearerAuth": []}],
+        "responses": {
+          "200": {"description": "Current and available accounts", "content": {"application/json": {"schema": {
+            "type": "object", "required": ["currentAccountIds", "availableAccountIds"],
+            "properties": {
+              "currentAccountIds": {"type": "array", "items": {"type": "string"}},
+              "availableAccountIds": {"type": "array", "items": {"type": "string"}}
+            }
+          }}}},
+          "403": {"description": "Local host owner required"}
+        }
+      }
+    },
+    "/v2/accounts/{id}/use-in-codex": {
+      "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}],
+      "post": {
+        "summary": "Switch the host's native Codex login",
+        "description": "Requires the local host owner and management mode. Backs up ~/.codex/auth.json before atomic replacement; config.toml is untouched. Poll the returned operation for completion. Restart an already running Codex session to use the selected login.",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "Idempotency-Key", "in": "header", "required": true, "schema": {"type": "string", "minLength": 1, "maxLength": 128}}],
+        "responses": {
+          "202": {"description": "Switch operation", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Operation"}}}},
+          "403": {"description": "Local host owner and management mode required"}
+        }
+      }
+    },
     "/v2/accounts/{id}": {
       "parameters": [
         {

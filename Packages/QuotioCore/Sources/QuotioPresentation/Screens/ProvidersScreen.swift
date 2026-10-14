@@ -224,6 +224,7 @@ struct ProvidersScreen: View {
             }
         }
         .listStyle(.inset)
+        .modifier(CodexSwitchResultModifier())
         .navigationTitle(provider?.displayName ?? "connections.all".localized())
         .toolbar {
             toolbarContent

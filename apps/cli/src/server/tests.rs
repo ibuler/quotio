@@ -2949,3 +2949,35 @@ async fn public_hosts_require_local_approval_for_native_access_and_browser_sign_
     let _ = server.await;
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+#[tokio::test]
+async fn codex_switch_requires_local_host_owner() {
+    let (state, dir, id) = fixture().await;
+    for (owner, host_user) in [(false, true), (true, false), (false, false)] {
+        let principal = security::Principal {
+            id: "test".into(),
+            owner,
+            manage: true,
+            host_user,
+        };
+        let status =
+            management::codex_switch_status(State(state.clone()), Extension(principal.clone()))
+                .await;
+        assert!(matches!(
+            status,
+            Err(ApiError(StatusCode::FORBIDDEN, "host_interaction_required"))
+        ));
+        let result = management::codex_switch(
+            State(state.clone()),
+            Extension(principal),
+            Path(id.clone()),
+            HeaderMap::new(),
+        )
+        .await;
+        assert!(matches!(
+            result,
+            Err(ApiError(StatusCode::FORBIDDEN, "host_interaction_required"))
+        ));
+    }
+    std::fs::remove_dir_all(dir).unwrap();
+}

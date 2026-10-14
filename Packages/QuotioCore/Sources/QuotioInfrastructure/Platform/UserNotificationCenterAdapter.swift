@@ -22,23 +22,28 @@ public final class UserNotificationCenterAdapter: NotificationDelivering {
     }
 
     public func requestAuthorization() async -> NotificationAuthorizationStatus {
-        do {
-            let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
-            return granted ? .authorized : .denied
-        } catch {
-            return .denied
+        await withCheckedContinuation { continuation in
+            center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                continuation.resume(returning: granted ? .authorized : .denied)
+            }
         }
     }
 
     public func authorizationStatus() async -> NotificationAuthorizationStatus {
-        let settings = await center.notificationSettings()
-        switch settings.authorizationStatus {
+        let status = await withCheckedContinuation { continuation in
+            center.getNotificationSettings { settings in
+                continuation.resume(returning: settings.authorizationStatus.rawValue)
+            }
+        }
+        switch UNAuthorizationStatus(rawValue: status) {
         case .authorized:
             return .authorized
         case .denied, .provisional, .ephemeral:
             return .denied
         case .notDetermined:
             return .notDetermined
+        case nil:
+            return .denied
         @unknown default:
             return .denied
         }

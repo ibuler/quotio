@@ -1,6 +1,174 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "codex.account.switchAction" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basculer"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chuyển"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换"
+          }
+        }
+      }
+    },
+    "codex.account.current" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current Codex account"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compte Codex actuel"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tài khoản Codex hiện tại"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前 Codex 账号"
+          }
+        }
+      }
+    },
+    "codex.account.switchTitle" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex account"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compte Codex"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tài khoản Codex"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex 账号"
+          }
+        }
+      }
+    },
+    "codex.account.loadHelp" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch the local Codex account; back up auth.json and keep config.toml unchanged"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changer le compte Codex local ; sauvegarder auth.json et conserver config.toml"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chuyển tài khoản Codex cục bộ; sao lưu auth.json và giữ nguyên config.toml"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换本地 Codex 账号；备份 auth.json，保持 config.toml 不变"
+          }
+        }
+      }
+    },
+    "codex.account.loaded" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex account switched. Restart Codex to use the new account."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compte Codex changé. Redémarrez Codex pour utiliser le nouveau compte."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã chuyển tài khoản Codex. Khởi động lại Codex để dùng tài khoản mới."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codex 账号已切换，请重启 Codex 后使用新账号。"
+          }
+        }
+      }
+    },
+    "codex.account.switchFailed" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not switch the Codex account. Check local credentials and file access, then refresh and try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de changer de compte Codex. Vérifiez les identifiants locaux et l’accès aux fichiers, puis réessayez."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không thể chuyển tài khoản Codex. Kiểm tra thông tin đăng nhập và quyền truy cập tệp, rồi thử lại."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法切换 Codex 账号。请检查本地凭证和文件访问权限，刷新后重试。"
+          }
+        }
+      }
+    },
     "quota.rate.day" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"~%@ a day"}},"fr":{"stringUnit":{"state":"translated","value":"~%@ par jour"}},"vi":{"stringUnit":{"state":"translated","value":"~%@ mỗi ngày"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"每天约 %@"}}}},
     "quota.rate.hour" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"~%@ an hour"}},"fr":{"stringUnit":{"state":"translated","value":"~%@ par heure"}},"vi":{"stringUnit":{"state":"translated","value":"~%@ mỗi giờ"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"每小时约 %@"}}}},
     "quota.insight.onPace" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"%@ · lasts to reset"}},"fr":{"stringUnit":{"state":"translated","value":"%@ · tient jusqu’à la réinit."}},"vi":{"stringUnit":{"state":"translated","value":"%@ · đủ đến lúc reset"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"%@ · 可撑到重置"}}}},

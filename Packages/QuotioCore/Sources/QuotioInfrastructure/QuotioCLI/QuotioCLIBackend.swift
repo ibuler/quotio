@@ -319,6 +319,21 @@ public actor QuotioCLIBackend: AccountManaging, QuotaCoordinating, MonitoringSet
         }
     }
 
+    public func codexSwitchStatus() async throws -> CodexAccountSwitchStatus {
+        guard let client else { throw CodexAccountSwitchFailure.unavailable }
+        return try await client.request("v2/codex-account")
+    }
+
+    public func switchCodexAccount(id: String) async throws {
+        guard let client else { throw CodexAccountSwitchFailure.unavailable }
+        do {
+            try await mutate(client: client, path: "v2/accounts/\(id)/use-in-codex", method: "POST", body: nil)
+            await loadSnapshot(mode: activeMode)
+        } catch {
+            throw CodexAccountSwitchFailure.failed
+        }
+    }
+
     public func accounts() async -> [Account] {
         await loadSnapshot(mode: activeMode)
         return reportedAccounts

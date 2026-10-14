@@ -195,7 +195,53 @@ pub(super) async fn source_remove(
     .await
 }
 
+pub(super) async fn codex_switch_status(
+    State(state): State<Arc<ApiState>>,
+    Extension(principal): Extension<security::Principal>,
+) -> Result<Json<crate::accounts::codex_switch::SwitchStatus>, ApiError> {
+    if !principal.owner || !principal.host_user {
+        return Err(ApiError(StatusCode::FORBIDDEN, "host_interaction_required"));
+    }
+    Ok(Json(
+        crate::accounts::codex_switch::status(
+            vault(&state)?,
+            state.proxy_auth_directory.clone(),
+            state
+                .settings
+                .read()
+                .await
+                .values
+                .disabled_proxy_auth_files
+                .clone(),
+        )
+        .await
+        .map_err(account_error)?,
+    ))
+}
+
+pub(super) async fn codex_switch(
+    State(state): State<Arc<ApiState>>,
+    Extension(principal): Extension<security::Principal>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+) -> Result<(StatusCode, Json<Operation>), ApiError> {
+    if !principal.owner || !principal.host_user {
+        return Err(ApiError(StatusCode::FORBIDDEN, "host_interaction_required"));
+    }
+    mutate(
+        state,
+        principal,
+        headers,
+        "codex_switch",
+        &id.clone(),
+        json!({}),
+        Mutation::CodexSwitch(id),
+    )
+    .await
+}
+
 enum Mutation {
+    CodexSwitch(String),
     ResolvedCreate(api::AccountCreateInput),
     ResolvedUpdate(String, api::ResolvedAccountPatch),
     ResolvedRemove(String),
@@ -399,6 +445,27 @@ async fn mutate(
                     return Ok(json!({"account_id":id}));
                 }
                 match mutation {
+                    Mutation::CodexSwitch(id) => {
+                        let _guard = work.client_mutation_guard(&principal).await?;
+                        crate::accounts::codex_switch::activate(
+                            vault.clone(),
+                            id.clone(),
+                            work.proxy_auth_directory.clone(),
+                            work.settings
+                                .read()
+                                .await
+                                .values
+                                .disabled_proxy_auth_files
+                                .clone(),
+                        )
+                        .await
+                        .map_err(|e| account_code(&e))?;
+                        crate::accounts::service::commit_once(vault, intent, |_| Ok(id.clone()))
+                            .await
+                            .map_err(|e| account_code(&e))?;
+                        work.invalidate_sources(&[]).await;
+                        Ok(json!({"account_id":id}))
+                    }
                     Mutation::ResolvedUpdate(id, patch) => {
                         let _guard = work.client_mutation_guard(&principal).await?;
                         let id = api::resolved_update_once(vault, id, patch, intent)

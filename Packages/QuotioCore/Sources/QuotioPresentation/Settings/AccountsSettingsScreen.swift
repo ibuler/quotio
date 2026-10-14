@@ -81,6 +81,8 @@ struct AccountsSettingsScreen: View {
             }
         }
         .environment(model)
+        .modifier(CodexSwitchResultModifier())
+        .task { await accounts.reloadCodexSwitchStatus() }
         .sheet(item: $model.sheet) { sheet in
             switch sheet {
             case .oauth(let provider):

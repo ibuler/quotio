@@ -95,7 +95,7 @@ final class RefreshButtonTests: XCTestCase {
                 selectProvider: { _ in }, pairIPhone: {}, openApp: {}, quit: {},
                 menuNeedsRebuild: { manager.rebuildMenuInPlace() }
             ))
-            manager.configureMenu(snapshotProvider: snapshot, commandDispatcher: commands)
+            manager.configureMenu(snapshotProvider: { snapshot() }, commandDispatcher: commands)
             let menu = NSMenu()
             menu.autoenablesItems = false
             manager.menuWillOpen(menu)

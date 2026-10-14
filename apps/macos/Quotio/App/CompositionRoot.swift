@@ -402,6 +402,17 @@ private final class ProductionAppRuntimeServices: AppRuntimeServices {
                     navigationScreenModel.showHistory(account)
                     windowPresenter.showMainWindow()
                 },
+                switchCodex: { [accountsScreenModel, weak statusBarManager] id in
+                    statusBarManager?.closeMenu()
+                    await accountsScreenModel.switchCodexAccount(id: id)
+                    if let message = accountsScreenModel.codexSwitchMessage {
+                        accountsScreenModel.codexSwitchMessage = nil
+                        let alert = NSAlert()
+                        alert.messageText = "codex.account.switchTitle".localized()
+                        alert.informativeText = message
+                        alert.runModal()
+                    }
+                },
                 loadHistory: { [quotioBackend] account, metricID, range in
                     try? await quotioBackend.historyChart(accountID: account.accountKey, metricID: metricID, range: range)
                 }
@@ -472,7 +483,9 @@ private final class ProductionAppRuntimeServices: AppRuntimeServices {
             quota: quotaScreenModel.state,
             menuBarPreferences: menuBarSettings.preferences,
             language: languageManager.currentLanguage,
-            trackingPreferences: quotaController.trackingPreferences
+            trackingPreferences: quotaController.trackingPreferences,
+            codexSwitchStatus: accountsScreenModel.codexSwitchStatus,
+            isSwitchingCodex: accountsScreenModel.switchingCodexAccountID != nil
         )
     }
 

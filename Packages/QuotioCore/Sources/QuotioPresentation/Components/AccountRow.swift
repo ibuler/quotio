@@ -265,6 +265,10 @@ struct AccountRow: View {
                     .clipShape(Capsule())
             }
             
+            if account.provider == .codex {
+                CodexAccountSwitchButton(accountID: account.menuBarAccountKey)
+            }
+
             // Switch button (Antigravity only, for proxy/direct accounts that are not active)
             if onSwitch != nil && !isActiveInIDE && account.source != .autoDetected {
                 Button {

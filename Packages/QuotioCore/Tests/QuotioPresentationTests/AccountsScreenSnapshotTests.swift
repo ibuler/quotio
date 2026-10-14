@@ -269,7 +269,7 @@ private actor SnapshotMonitoringSettings: MonitoringSettingsManaging {
 
 private actor SnapshotOAuthAuthorizer: OAuthAuthorizing {
     func begin(request: OAuthAuthorizationRequest, attemptID: OAuthAttemptID,
-               progress: @escaping @concurrent @Sendable (OAuthPrompt) async -> Void) async throws -> OAuthAuthorizationOutcome {
+               progress: @escaping @Sendable (OAuthPrompt) async -> Void) async throws -> OAuthAuthorizationOutcome {
         throw OAuthFlowFailure.unsupportedProvider
     }
 

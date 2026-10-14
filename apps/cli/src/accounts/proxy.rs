@@ -272,6 +272,63 @@ pub fn sources(
     Ok(sources)
 }
 
+/// Full native login material is used only by the explicit host-local switch action.
+/// Borrowed proxy credentials remain read-only; Quotio never refreshes their source.
+pub(crate) fn codex_switch_sources(
+    directory: &Path,
+    disabled_files: &[String],
+) -> Result<Vec<(String, Value)>, AccountError> {
+    validate_directory(directory)?;
+    let entries = match std::fs::read_dir(directory) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(_) => return Err(AccountError::Storage),
+    };
+    let paths = entries
+        .take(MAX_FILES + 1)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|_| AccountError::Storage)?;
+    if paths.len() > MAX_FILES {
+        return Err(AccountError::Storage);
+    }
+    let mut result = Vec::new();
+    for entry in paths {
+        if disabled_files
+            .iter()
+            .any(|name| entry.file_name() == name.as_str())
+        {
+            continue;
+        }
+        let Ok(Some(source)) = inspect(entry.path()) else {
+            continue;
+        };
+        if source.provider != Provider::Codex {
+            continue;
+        }
+        let value: Value = match read_file(&source.path)
+            .ok()
+            .and_then(|b| serde_json::from_slice(&b).ok())
+        {
+            Some(value) => value,
+            None => continue,
+        };
+        if disabled(&value).unwrap_or(true) {
+            continue;
+        }
+        let auth = serde_json::json!({"auth_mode":"chatgpt", "OPENAI_API_KEY":null, "tokens": {
+            "access_token": text(&value, &["access_token", "accessToken"]),
+            "refresh_token": text(&value, &["refresh_token", "refreshToken"]),
+            "id_token": text(&value, &["id_token", "idToken"]).unwrap_or(""),
+            "account_id": text(&value, &["account_id", "accountId"])
+        }});
+        result.push((
+            crate::contract::snapshot::external_id("codex", Some(&source.reference)),
+            auth,
+        ));
+    }
+    Ok(result)
+}
+
 fn inspect(path: PathBuf) -> Result<Option<BorrowedProxyProvider>, AccountError> {
     if path.extension().and_then(|value| value.to_str()) != Some("json") {
         return Ok(None);

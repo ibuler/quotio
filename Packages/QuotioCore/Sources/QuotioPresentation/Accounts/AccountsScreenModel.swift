@@ -6,6 +6,9 @@ import QuotioDomain
 @MainActor
 @Observable
 public final class AccountsScreenModel {
+    public private(set) var codexSwitchStatus = CodexAccountSwitchStatus()
+    public private(set) var switchingCodexAccountID: String?
+    public var codexSwitchMessage: String?
     public private(set) var accounts: [Account] = []
     public private(set) var nativeSourcePermissions: [NativeSourcePermission] = []
     public private(set) var authorizedNativeSources: [NativeSourcePermission] = []
@@ -29,8 +32,31 @@ public final class AccountsScreenModel {
 
     public func reloadAccounts() async {
         accounts = await accountService.accounts()
+        await reloadCodexSwitchStatus()
         await reloadDiscovery()
         storageProblem = await accountService.accountStorageProblem()
+    }
+
+    public func reloadCodexSwitchStatus() async {
+        do { codexSwitchStatus = try await accountService.codexSwitchStatus() }
+        catch { codexSwitchStatus = .init() }
+    }
+
+    public func canSwitchCodexAccount(id: String) -> Bool {
+        codexSwitchStatus.availableAccountIds.contains(id) && !codexSwitchStatus.currentAccountIds.contains(id)
+    }
+
+    public func switchCodexAccount(id: String) async {
+        guard switchingCodexAccountID == nil, canSwitchCodexAccount(id: id) else { return }
+        switchingCodexAccountID = id
+        defer { switchingCodexAccountID = nil }
+        do {
+            try await accountService.switchCodexAccount(id: id)
+            await reloadAccounts()
+            codexSwitchMessage = "codex.account.loaded".localized()
+        } catch {
+            codexSwitchMessage = "codex.account.switchFailed".localized()
+        }
     }
 
     public func registerDetectedNativeAccounts() async {

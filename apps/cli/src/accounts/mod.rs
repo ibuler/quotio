@@ -1,6 +1,7 @@
 pub mod api;
 pub(crate) mod authorization;
 pub(crate) mod clients;
+pub(crate) mod codex_switch;
 pub mod command;
 pub(crate) mod companion;
 pub mod discovery;

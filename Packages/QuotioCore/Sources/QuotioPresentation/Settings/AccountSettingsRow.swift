@@ -48,6 +48,7 @@ struct AccountSettingsRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .opacity(account.isDisabled ? 0.6 : 1)
+            if provider == .codex { CodexAccountSwitchButton(accountID: account.accountKey) }
             if let recovery { recoveryButton(recovery) }
             if menuBar.isSelected(menuBarItem) {
                 let title = "settings.pinnedToMenuBar".localized()

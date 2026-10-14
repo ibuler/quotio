@@ -34,7 +34,7 @@ public actor LocalProxyOAuthAuthorizer: OAuthAuthorizing {
     public func begin(
         request: OAuthAuthorizationRequest,
         attemptID: OAuthAttemptID,
-        progress: @escaping @concurrent @Sendable (OAuthPrompt) async -> Void
+        progress: @escaping @Sendable (OAuthPrompt) async -> Void
     ) async throws -> OAuthAuthorizationOutcome {
         guard let provider = QuotaProvider(rawValue: request.providerID.rawValue) else {
             throw OAuthFlowFailure.unsupportedProvider
@@ -89,7 +89,7 @@ public actor LocalProxyOAuthAuthorizer: OAuthAuthorizing {
         provider: QuotaProvider,
         automaticallyOpensBrowser: Bool,
         attemptID: OAuthAttemptID,
-        progress: @escaping @concurrent @Sendable (OAuthPrompt) async -> Void
+        progress: @escaping @Sendable (OAuthPrompt) async -> Void
     ) async throws -> Account {
         guard let connection = await runtime().management else {
             throw OAuthFlowFailure.provider("Proxy not running. Please start the proxy first.")
@@ -149,7 +149,7 @@ public actor LocalProxyOAuthAuthorizer: OAuthAuthorizing {
     private func runKiroFlow(
         method: OAuthAuthorizationMethod,
         attemptID: OAuthAttemptID,
-        progress: @escaping @concurrent @Sendable (OAuthPrompt) async -> Void
+        progress: @escaping @Sendable (OAuthPrompt) async -> Void
     ) async throws -> Account {
         let command: ProxyCLIAuthCommand = switch method {
         case .kiroAWSDeviceCode: .kiroAWSLogin
@@ -179,7 +179,7 @@ public actor LocalProxyOAuthAuthorizer: OAuthAuthorizing {
         provider: QuotaProvider,
         command: ProxyCLIAuthCommand,
         attemptID: OAuthAttemptID,
-        progress: @escaping @concurrent @Sendable (OAuthPrompt) async -> Void
+        progress: @escaping @Sendable (OAuthPrompt) async -> Void
     ) async throws -> Account {
         let initialCount = await authFileCount(for: provider)
         let result = try await runAuthCommand(command)

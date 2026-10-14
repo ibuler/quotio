@@ -56,6 +56,8 @@ public struct NativeDiscoverySnapshot: Sendable {
 }
 
 public protocol AccountManaging: Sendable {
+    func codexSwitchStatus() async throws -> CodexAccountSwitchStatus
+    func switchCodexAccount(id: String) async throws
     func registerDetectedNativeAccounts() async
     func rescanNativeAccounts(for provider: QuotaProvider) async
     func rescanAllNativeAccounts() async
@@ -79,6 +81,8 @@ public protocol AccountManaging: Sendable {
 }
 
 public extension AccountManaging {
+    func codexSwitchStatus() async throws -> CodexAccountSwitchStatus { .init() }
+    func switchCodexAccount(id: String) async throws { throw CodexAccountSwitchFailure.unavailable }
     func rescanAllNativeAccounts() async { await registerDetectedNativeAccounts() }
     func nativeDiscoverySnapshot() async -> NativeDiscoverySnapshot { .init() }
     func accountStorageProblem() async -> AccountStorageProblem? { nil }
