@@ -134,6 +134,12 @@ final class LocalizationBundleTests: XCTestCase {
 
     private var requiredLocalizationKeys: [String] {
         [
+            "codex.account.switchAction",
+            "codex.account.current",
+            "codex.account.switchTitle",
+            "codex.account.loadHelp",
+            "codex.account.loaded",
+            "codex.account.switchFailed",
             "agents.amp.configSuccess",
             "agents.amp.mergeAndSaveFiles",
             "agents.amp.mergeSecrets",

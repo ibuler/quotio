@@ -2971,7 +2971,7 @@ async fn codex_switch_requires_local_host_owner() {
             State(state.clone()),
             Extension(principal),
             Path(id.clone()),
-            HeaderMap::new(),
+            axum::http::HeaderMap::new(),
         )
         .await;
         assert!(matches!(

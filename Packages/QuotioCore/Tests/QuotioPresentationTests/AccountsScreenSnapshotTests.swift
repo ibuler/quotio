@@ -68,11 +68,39 @@ final class AccountsScreenSnapshotTests: XCTestCase {
         await fixture.controller.shutdown()
     }
 
+    func testRenderCodexSwitchInBothAppearances() async throws {
+        guard let output = ProcessInfo.processInfo.environment["QUOTIO_ACCOUNTS_SNAPSHOT_DIR"], !output.isEmpty else {
+            throw XCTSkip("Set QUOTIO_ACCOUNTS_SNAPSHOT_DIR to render snapshots")
+        }
+        try FileManager.default.createDirectory(atPath: output, withIntermediateDirectories: true)
+        let service = SnapshotAccountService(accounts: [], discovery: .init(), storageProblem: nil)
+        let model = AccountsScreenModel(accountService: service)
+        await model.reloadCodexSwitchStatus()
+        for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+            for language in ["en", "zh-Hans"] {
+                useLanguage(language)
+                let view = VStack(spacing: 20) {
+                    HStack { Text("personal@example.invalid"); Spacer(); CodexAccountSwitchButton(accountID: "current") }
+                    Divider()
+                    HStack { Text("work@example.invalid"); Spacer(); CodexAccountSwitchButton(accountID: "available") }
+                }
+                .padding(20)
+                .frame(width: 560, height: 140)
+                .background(Color(nsColor: .windowBackgroundColor))
+                .environment(model)
+                try await render(view, width: 560, height: 140, appearance: appearance,
+                    to: output + "/codex-switch-\(language)-\(appearance == .darkAqua ? "dark" : "light").png")
+            }
+        }
+    }
+
     private func useLanguage(_ code: String) {
-        let appPath = URL(fileURLWithPath: #filePath)
+        let defaultAppPath = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("apps/macos/build/DebugDerivedData/Build/Products/Debug/Quotio.app")
+        let appPath = ProcessInfo.processInfo.environment["QUOTIO_SNAPSHOT_APP_PATH"]
+            .map { URL(fileURLWithPath: $0) } ?? defaultAppPath
         guard let app = Bundle(url: appPath),
               let path = app.path(forResource: code, ofType: "lproj"),
               let bundle = Bundle(path: path) else { return }
@@ -223,6 +251,9 @@ private actor SnapshotAccountService: AccountManaging {
         self.storageProblem = storageProblem
     }
 
+    func codexSwitchStatus() -> CodexAccountSwitchStatus {
+        .init(currentAccountIds: ["current"], availableAccountIds: ["current", "available"])
+    }
     func registerDetectedNativeAccounts() {}
     func rescanNativeAccounts(for provider: QuotaProvider) {}
     func nativeDiscoverySnapshot() -> NativeDiscoverySnapshot { discovery }

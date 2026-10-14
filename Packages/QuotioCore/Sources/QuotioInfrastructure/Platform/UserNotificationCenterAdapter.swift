@@ -23,7 +23,7 @@ public final class UserNotificationCenterAdapter: NotificationDelivering {
 
     public func requestAuthorization() async -> NotificationAuthorizationStatus {
         await withCheckedContinuation { continuation in
-            center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+            center.requestAuthorization(options: [.alert, .sound, .badge]) { @Sendable granted, _ in
                 continuation.resume(returning: granted ? .authorized : .denied)
             }
         }
@@ -31,7 +31,7 @@ public final class UserNotificationCenterAdapter: NotificationDelivering {
 
     public func authorizationStatus() async -> NotificationAuthorizationStatus {
         let status = await withCheckedContinuation { continuation in
-            center.getNotificationSettings { settings in
+            center.getNotificationSettings { @Sendable settings in
                 continuation.resume(returning: settings.authorizationStatus.rawValue)
             }
         }
